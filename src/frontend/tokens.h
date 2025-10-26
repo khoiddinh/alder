@@ -17,10 +17,10 @@ enum class TokenType {
     // TODO: add boolean
 
     // type names
-    Kwi64, Kwi32, 
+    KwInt, // default 64 bit
     KwBool,
     KwChar,
-    Kwf64,
+    KwFloat, // default 64 bit
     KwVoid,
 
     // keywords

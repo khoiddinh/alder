@@ -129,16 +129,14 @@ Token Lexer::scanIdentifierOrKeywordOrType() {
         tokType = TokenType::KwIn;
     } 
     // check if type
-    else if (str == "i64") {
-        tokType = TokenType::Kwi64;
-    } else if (str == "i32") {
-        tokType = TokenType::Kwi32;
+    else if (str == "int") {
+        tokType = TokenType::KwInt;
     } else if (str == "bool") {
         tokType = TokenType::KwBool;
     } else if (str == "char") {
         tokType = TokenType::KwChar;
-    } else if (str == "f64") {
-        tokType = TokenType::Kwf64;
+    } else if (str == "float") {
+        tokType = TokenType::KwFloat;
     } else if (str == "void") {
         tokType = TokenType::KwVoid;
     }

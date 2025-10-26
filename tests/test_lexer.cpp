@@ -48,11 +48,11 @@ TEST_CASE("Empty input -> Eof") {
 }
 
 TEST_CASE("Identifiers vs keywords vs types vs boollit") {
-    auto ts = lex_all("def foo i64 true false final return if else for while not");
+    auto ts = lex_all("def foo int true false final return if else for while not");
     // def foo i64 true false final return if else for while not
     require_token_eq(ts[0], tok(TokenType::KwDef,   "def"));
     require_token_eq(ts[1], tok(TokenType::Identifier, "foo"));
-    require_token_eq(ts[2], tok(TokenType::Kwi64,  "i64"));
+    require_token_eq(ts[2], tok(TokenType::KwInt,  "int"));
     require_token_eq(ts[3], tok(TokenType::BoolLit,"true"));
     require_token_eq(ts[4], tok(TokenType::BoolLit,"false"));
     require_token_eq(ts[5], tok(TokenType::KwFinal,"final"));
@@ -100,20 +100,20 @@ TEST_CASE("Newlines are tokens; spaces are skipped") {
 }
 
 TEST_CASE("peek() returns next without consuming; next() consumes") {
-    Lexer lx("i32");
+    Lexer lx("int");
     Token p = lx.peek();
-    REQUIRE(p.type == TokenType::Kwi32);
+    REQUIRE(p.type == TokenType::KwInt);
     Token n = lx.next();
-    REQUIRE(n.type == TokenType::Kwi32);
+    REQUIRE(n.type == TokenType::KwInt);
     REQUIRE(lx.isAtEnd() == true); // assuming no hidden tokens left
 }
 
 TEST_CASE("Comments and whitespace") {
-    auto ts = lex_all("foo  # comment\n  i64");
+    auto ts = lex_all("foo  # comment\n  int");
     require_token_eq(ts[0], tok(TokenType::Identifier, "foo"));
     // if your design *emits* Newline, expect it:
     require_token_eq(ts[1], tok(TokenType::Newline, "\n"));
-    require_token_eq(ts[2], tok(TokenType::Kwi64, "i64"));
+    require_token_eq(ts[2], tok(TokenType::KwInt, "int"));
     REQUIRE(ts[3].type == TokenType::Eof);
 }
 
@@ -183,17 +183,17 @@ TEST_CASE("Long identifiers and keywords boundary") {
 }
 
 TEST_CASE("Types vs identifiers that start with type text") {
-    auto ts = lex_all("i64 i64bit i32 i32x bool boolean char char_ f64 f64y");
-    require_token_eq(ts[0], tok(TokenType::Kwi64, "i64"));
-    require_token_eq(ts[1], tok(TokenType::Identifier, "i64bit"));
-    require_token_eq(ts[2], tok(TokenType::Kwi32, "i32"));
-    require_token_eq(ts[3], tok(TokenType::Identifier, "i32x"));
+    auto ts = lex_all("int intbit int intx bool boolean char char_ float floaty");
+    require_token_eq(ts[0], tok(TokenType::KwInt, "int"));
+    require_token_eq(ts[1], tok(TokenType::Identifier, "intbit"));
+    require_token_eq(ts[2], tok(TokenType::KwInt, "int"));
+    require_token_eq(ts[3], tok(TokenType::Identifier, "intx"));
     require_token_eq(ts[4], tok(TokenType::KwBool, "bool"));
     require_token_eq(ts[5], tok(TokenType::Identifier, "boolean"));
     require_token_eq(ts[6], tok(TokenType::KwChar, "char"));
     require_token_eq(ts[7], tok(TokenType::Identifier, "char_"));
-    require_token_eq(ts[8], tok(TokenType::Kwf64, "f64"));
-    require_token_eq(ts[9], tok(TokenType::Identifier, "f64y"));
+    require_token_eq(ts[8], tok(TokenType::KwFloat, "float"));
+    require_token_eq(ts[9], tok(TokenType::Identifier, "floaty"));
 
     auto ts2 = lex_all("test_var def #comments weofweif \n _var");
     require_token_eq(ts2[0], tok(TokenType::Identifier, "test_var"));
