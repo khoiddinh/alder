@@ -329,3 +329,43 @@ TEST_CASE("Arrow at start of line") {
     require_token_eq(ts[1], tok(TokenType::Identifier, "x"));
     REQUIRE(ts[2].type == TokenType::Eof);
 }
+
+TEST_CASE("Greater compare ") {
+    auto ts = lex_all("x > y");
+    require_token_eq(ts[0], tok(TokenType::Identifier, "x"));
+    require_token_eq(ts[1], tok(TokenType::GCompare, ">"));
+        require_token_eq(ts[2], tok(TokenType::Identifier, "y"));
+    REQUIRE(ts[3].type == TokenType::Eof);
+}
+
+TEST_CASE("Greater or equal compare") {
+    auto ts = lex_all("x >= y");
+    require_token_eq(ts[0], tok(TokenType::Identifier, "x"));
+    require_token_eq(ts[1], tok(TokenType::GEqCompare, ">="));
+        require_token_eq(ts[2], tok(TokenType::Identifier, "y"));
+    REQUIRE(ts[3].type == TokenType::Eof);
+}
+
+TEST_CASE("Less compare ") {
+    auto ts = lex_all("x < y");
+    require_token_eq(ts[0], tok(TokenType::Identifier, "x"));
+    require_token_eq(ts[1], tok(TokenType::LCompare, "<"));
+        require_token_eq(ts[2], tok(TokenType::Identifier, "y"));
+    REQUIRE(ts[3].type == TokenType::Eof);
+}
+
+TEST_CASE("Less equal compare ") {
+    auto ts = lex_all("x <= y");
+    require_token_eq(ts[0], tok(TokenType::Identifier, "x"));
+    require_token_eq(ts[1], tok(TokenType::LEqCompare, "<="));
+        require_token_eq(ts[2], tok(TokenType::Identifier, "y"));
+    REQUIRE(ts[3].type == TokenType::Eof);
+}
+
+TEST_CASE("Not equal compare ") {
+    auto ts = lex_all("x != y");
+    require_token_eq(ts[0], tok(TokenType::Identifier, "x"));
+    require_token_eq(ts[1], tok(TokenType::NotEq, "!="));
+        require_token_eq(ts[2], tok(TokenType::Identifier, "y"));
+    REQUIRE(ts[3].type == TokenType::Eof);
+}

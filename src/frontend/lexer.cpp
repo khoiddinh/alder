@@ -237,6 +237,33 @@ Token Lexer::scanOperatorOrPunctOrNewline() {
                 tokType = TokenType::Assign;
             }
             break;
+        case '<': // handle < and <= case
+            if (peekChar() == '=') {
+                tokType = TokenType::LEqCompare;
+                // increment to consume second '='
+                str += advanceChar(); // add to str
+            } else {
+                tokType = TokenType::LCompare;
+            }
+            break;
+        case '>': // handle > and >= case
+            if (peekChar() == '=') {
+                tokType = TokenType::GEqCompare;
+                // increment to consume second '='
+                str += advanceChar(); // add to str
+            } else {
+                tokType = TokenType::GCompare;
+            }
+            break;
+        case '!': // !=
+            if (peekChar() == '=') {
+                tokType = TokenType::NotEq;
+                // increment to consume second '='
+                str += advanceChar(); // add to str
+            } else {
+                throw std::runtime_error("= must follow ! in a valid != expression");
+            }
+            break;
         case '\n': 
             tokType = TokenType::Newline;
             break;

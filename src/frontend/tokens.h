@@ -50,12 +50,17 @@ enum class TokenType {
     Slash,       // /
     Assign,     // =
     Equals,     // ==
+    LEqCompare, // <=
+    GEqCompare, // >=
+    LCompare,   // <
+    GCompare,   // >
+    NotEq,      // !=
+    
 };
 
 struct Token {
     TokenType type;
     std::string lexeme; // chars from input
-    // TODO: implement location tracking
 };
 
 }
