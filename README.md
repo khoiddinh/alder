@@ -28,12 +28,15 @@ assign      := Identifier Assign expr [Newline]
 exprstmt    := expr [Newline]
 block       := LBrace { stmt } RBrace
 
-expr        := (prefix then postfix calls then infix as in §4)
-prefix      := IntLit | StringLit | BoolLit | Identifier
-             | Minus prefix | KwNot prefix
-             | LParen expr RParen
-postfix     := ( LParen [expr { Comma expr }] RParen )*
-infix       := { (Star|Slash|Plus|Minus|Equals) expr }
+expr            := equality ;
+
+equality        := comparison { (Equals | NotEq) comparison } ;
+comparison      := additive   { (LCompare | LEqCompare | GCompare | GEqCompare) additive } ;
+additive        := multiplicative { (Plus | Minus) multiplicative } ;
+multiplicative  := unary { (Star | Slash) unary } ;
+unary           := (Minus | KwNot) unary | postfix ;
+postfix         := primary ( LParen [expr { Comma expr }] RParen )* ;
+primary         := IntLit | StringLit | BoolLit | Identifier | LParen expr RParen ;
 
 
 AST Nodes:

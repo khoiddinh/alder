@@ -117,12 +117,18 @@ Token Lexer::scanIdentifierOrKeywordOrType() {
         tokType = TokenType::KwReturn;
     } else if (str == "if") {
         tokType = TokenType::KwIf;
+    } else if (str == "elif") {
+        tokType = TokenType::KwElif;
     } else if (str == "else") {
         tokType = TokenType::KwElse;
     } else if (str == "for") {
         tokType = TokenType::KwFor;
     } else if (str == "not") {
         tokType = TokenType::KwNot;
+    } else if (str == "and") {
+        tokType = TokenType::KwAnd;
+    } else if (str == "or") {
+        tokType = TokenType::KwOr;
     } else if (str == "while") {
         tokType = TokenType::KwWhile;
     } else if (str == "in") {
@@ -147,11 +153,25 @@ Token Lexer::scanIdentifierOrKeywordOrType() {
 }
 
 Token Lexer::scanNumber() {
-    std::string str = "";
+    std::string str;
+    bool isFloat = false;
+
+    // Integer part
     while (std::isdigit(peekChar())) {
         str += advanceChar();
     }
-    return Token{TokenType::IntLit, str};
+
+    // Fractional part
+    if (peekChar() == '.' && std::isdigit(peekNextChar())) {
+        isFloat = true;
+        str += advanceChar(); // consume '.'
+
+        while (std::isdigit(peekChar())) {
+            str += advanceChar();
+        }
+    }
+    return Token{isFloat ? TokenType::FloatLit : TokenType::IntLit, str};
+
 }
 
 Token Lexer::scanString() {

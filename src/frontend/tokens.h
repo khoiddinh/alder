@@ -13,14 +13,15 @@ enum class TokenType {
     // identifiers & literals
     Identifier,
     IntLit,
+    FloatLit,
     StringLit,
-    // TODO: add boolean
+    // TODO: add char lit    
 
     // type names
     KwInt, // default 64 bit
     KwBool,
     KwChar,
-    KwFloat, // default 64 bit
+    KwFloat, // default 64 bit // idx: 10
     KwVoid,
 
     // keywords
@@ -30,9 +31,12 @@ enum class TokenType {
     KwFinal,
     KwReturn,
     KwIf,
+    KwElif,
     KwElse,
     KwFor,
-    KwNot,
+    KwNot, // idx: 20
+    KwAnd,
+    KwOr,
     KwWhile,
     KwIn,
 
@@ -41,7 +45,7 @@ enum class TokenType {
     LBrace, RBrace,
     LBracket, RBracket,
     Comma, Colon, 
-    Arrow,
+    Arrow, 
 
     // operators
     Plus,       // +

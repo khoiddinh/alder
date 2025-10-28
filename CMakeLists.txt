@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Your library / sources
 add_library(alder STATIC
     src/frontend/lexer.cpp
-    # add other sources…
+    src/frontend/parser.cpp
 )
 target_include_directories(alder PUBLIC include)
 
@@ -24,6 +24,7 @@ FetchContent_MakeAvailable(Catch2)
 # ---- Tests ----
 add_executable(alder_tests
     tests/test_lexer.cpp
+    tests/test_parser.cpp
 )
 target_link_libraries(alder_tests PRIVATE alder Catch2::Catch2WithMain)
 
