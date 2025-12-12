@@ -32,12 +32,12 @@ private:
     };    
     /// @brief Lookup table for mapping punctuation schars to tokens
     static inline const std::unordered_map<char, TokenType> PUNCTUATION = {
-        {"(", TokenType::LParen},
-        {")", TokenType::RParen},
-        {"[", TokenType::LBracket},
-        {"]", TokenType::RBracket},
-        {",", TokenType::Comma},
-        {":", TokenType::Colon}
+        {'(', TokenType::LParen},
+        {')', TokenType::RParen},
+        {'[', TokenType::LBracket},
+        {']', TokenType::RBracket},
+        {',', TokenType::Comma},
+        {':', TokenType::Colon}
     };
     /// @brief Lookup table for mapping word operators to tokens
     static inline const std::unordered_map<std::string_view, TokenType> WORD_OPERATORS = {
