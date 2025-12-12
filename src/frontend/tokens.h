@@ -18,16 +18,7 @@ enum class TokenType {
     FloatLit,
     StringLit,
     BoolLit,
-    // TODO: add char lit  
-
-    /*
-    // type names
-    KwInt, // default 64 bit
-    KwBool,
-    KwChar,
-    KwFloat, // default 64 bit // idx: 10
-    KwVoid,
-    */
+    // TODO: add char lit 
 
     // keywords
     
@@ -47,6 +38,17 @@ enum class TokenType {
     Comma, Colon, 
 
     // operators
+    Operator
+
+};
+
+struct Token {
+    TokenType type;
+    std::string lexeme; // chars from input
+    std::optional<OperatorKind> op;
+};
+
+enum class OperatorKind {
     // Word operators
     Not,        // not
     And,        // and
@@ -70,13 +72,6 @@ enum class TokenType {
     Assign,             // =
     LessCompare,        // <
     GreaterCompare,     // >
-    
-
-};
-
-struct Token {
-    TokenType type;
-    std::string lexeme; // chars from input
 };
 
 }

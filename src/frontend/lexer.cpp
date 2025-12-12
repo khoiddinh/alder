@@ -134,7 +134,7 @@ Token Lexer::scanWord() {
         return {TokenType::BoolLit, std::string(text)};
 
     if (auto it = WORD_OPERATORS.find(text); it != WORD_OPERATORS.end())
-        return {it->second, std::string(text)};
+        return {TokenType::Operator, std::string(text), it->second};
 
     if (auto it = KEYWORDS.find(text); it != KEYWORDS.end())
         return {it->second, std::string(text)};
@@ -192,7 +192,7 @@ Token Lexer::scanSymbol() {
     for (auto [text, kind] : OPERATORS) {
         if (source_.compare(pos_, text.size(), text) == 0) {
             pos_ += text.size();
-            return {kind, std::string(text)};
+            return {TokenType::Operator, std::string(text), kind};
         }
     }
 

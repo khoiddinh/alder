@@ -40,29 +40,29 @@ private:
         {':', TokenType::Colon}
     };
     /// @brief Lookup table for mapping word operators to tokens
-    static inline const std::unordered_map<std::string_view, TokenType> WORD_OPERATORS = {
-        {"not", TokenType::Not},
-        {"and", TokenType::And},
-        {"or", TokenType::Or}
+    static inline const std::unordered_map<std::string_view, OperatorKind> WORD_OPERATORS = {
+        {"not", OperatorKind::Not},
+        {"and", OperatorKind::And},
+        {"or", OperatorKind::Or}
     };
 
     /// @brief Ordered (greedy) table for mapping symbol operator strings to tokens
-    static constexpr std::pair<std::string_view, TokenType> OPERATORS[] = {
-        {">>>", TokenType::LogicRightBitShift},
-        {"->", TokenType::Arrow},
-        {"==", TokenType::Equals},
-        {"!=", TokenType::NotEquals},
-        {"<=", TokenType::LessEqCompare},
-        {">=", TokenType::GreaterEqCompare},
-        {"<<", TokenType::LeftBitShift},
-        {">>", TokenType::RightBitShift},
+    static constexpr std::pair<std::string_view, OperatorKind> OPERATORS[] = {
+        {">>>", OperatorKind::LogicRightBitShift},
+        {"->", OperatorKind::Arrow},
+        {"==", OperatorKind::Equals},
+        {"!=", OperatorKind::NotEquals},
+        {"<=", OperatorKind::LessEqCompare},
+        {">=", OperatorKind::GreaterEqCompare},
+        {"<<", OperatorKind::LeftBitShift},
+        {">>", OperatorKind::RightBitShift},
         
-        {"+", TokenType::Plus},
-        {"-", TokenType::Minus},
-        {"/", TokenType::Slash},
-        {"=", TokenType::Assign},
-        {"<", TokenType::LessCompare},
-        {">", TokenType::GreaterCompare}
+        {"+", OperatorKind::Plus},
+        {"-", OperatorKind::Minus},
+        {"/", OperatorKind::Slash},
+        {"=", OperatorKind::Assign},
+        {"<", OperatorKind::LessCompare},
+        {">", OperatorKind::GreaterCompare}
     };
 
     
