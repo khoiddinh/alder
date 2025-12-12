@@ -1,67 +1,60 @@
 #include "lexer.h"
-#include <cctype> 
-#include <optional>
-#include <set>
-#include <iostream>
+#include <cctype>
+#include <stdexcept>
 
 namespace alder {
 
-Lexer::Lexer(std::string source) {
-    lookahead_.reset();
-    source_ = source;
-}
-
-// PUBLIC API
-Token Lexer::next() {
-    // if lookahead_ exists, return it and clear it
-    if (lookahead_.has_value()) {
-        Token nextToken = *lookahead_;
-        lookahead_.reset(); // clear
-        return nextToken;
-    }
-    // else find token skipWhitespaceAndComments, check EOF,
-    skipWhitespaceAndComments(); 
-    if (isAtEnd()) {
-        return makeEofToken();
-    } else {
-        // TODO: handle types, newline
-        // then dispatch: identifier, number, string, operator
-        char firstChar = peekChar();
-        Token nextToken;
-        if (std::isalpha(firstChar) || firstChar == '_') { // only identifier can start with leading '_'
-            nextToken = scanIdentifierOrKeywordOrType();
-        }
-        else if (std::isdigit(firstChar)) { // number
-            nextToken = scanNumber();
-        }
-        else if (firstChar == '"') { // string
-            nextToken = scanString();
-        }
-        else {
-            nextToken = scanOperatorOrPunctOrNewline();
-        }
-        return nextToken;
-    }
-    
-}
+Lexer::Lexer(std::string source)
+    : source_(std::move(source)) {}
 
 Token Lexer::peek() {
-    // TODO:
-    // if lookahead_ is empty, fill it by calling next()
-    if (lookahead_.has_value()) {
-        return *lookahead_;
-    } else {
-        lookahead_ = next();
-        return *lookahead_;
+    if (!pending_.empty()) {
+        return pending_.front();
     }
+    return;
 }
+
+Token Lexer::next() {
+    if (!pending_.empty()) {
+        Token t = pending_.front();
+        pending_.pop_front();
+        return t;
+    }
+
+    skipWhitespaceAndComments();
+
+    // if EOF, flush detents (close out any statements)
+    if (isAtEnd()) {
+        while (!indentStack_.empty()) {
+            indentStack_.pop();
+            pending_.push_back({TokenType::Detent, ""});
+        }
+        if (!pending_.empty()) {
+            return next();
+        }
+        return makeEofToken();
+    }
+
+    char c = peekChar();
+
+    if (std::isalpha(c) || c == '_')
+        return scanWord();
+
+    if (std::isdigit(c))
+        return scanNumber();
+
+    if (c == '"')
+        return scanString();
+
+    return scanSymbol();
+}
+
+// ===== helpers =====
 
 bool Lexer::isAtEnd() const {
     return pos_ >= source_.size();
 }
 
-// PRIVATE HELPERS (stubs for now)
-// returns char at curr pos
 char Lexer::peekChar() const {
     return isAtEnd() ? '\0' : source_[pos_];
 }
@@ -70,231 +63,145 @@ char Lexer::peekNextChar() const {
     return (pos_ + 1 < source_.size()) ? source_[pos_ + 1] : '\0';
 }
 
-// get curr char then incr pos
 char Lexer::advanceChar() {
-    // TODO: update line/column
-
-    // catch error
     if (isAtEnd()) {
-        std::runtime_error("Tried to advance char past end");
+        throw std::runtime_error("advance past EOF");
     }
     return source_[pos_++];
 }
 
-// ends with pos at first non whitespace/comment char
 void Lexer::skipWhitespaceAndComments() {
-    while (peekChar() == ' ' || peekChar() == '#') { 
-        if (peekChar() == '#') { 
-            // read until newline or eof
-            while (peekChar() != '\n' && peekChar() != '\0') {
-                advanceChar();
-            }
-        } else { // don't consume \n or \0
+    while (true) {
+        char c = peekChar();
+
+        if (c == ' ' || c == '\t') {
             advanceChar();
+        }
+        else if (c == '#') {
+            while (peekChar() != '\n' && !isAtEnd())
+                advanceChar();
+        }
+        else {
+            break;
         }
     }
 }
 
-// ends with pos at first non identifier/kword char
-Token Lexer::scanIdentifierOrKeywordOrType() {
-    // get the string
-    std::string str = "";
-    while (std::isalnum(peekChar()) || peekChar() == '_') { // types can be numeric, also read through '_'
-        str += advanceChar();
-    }
-    TokenType tokType;
-    // check if bool
-    if (str == "true" || str == "false") {
-        tokType = TokenType::BoolLit;
-    } 
+// ===== scanners =====
+Token Lexer::handleNewline() {
+    // consume \n
+    advanceChar();
+    pending_.push_back({TokenType::Newline, "\n"});
     
-    // check if a keyword
-    else if (str == "def") {
-        tokType = TokenType::KwDef;
-    } else if (str == "final") {
-        tokType = TokenType::KwFinal;
-    } else if (str == "return") {
-        tokType = TokenType::KwReturn;
-    } else if (str == "if") {
-        tokType = TokenType::KwIf;
-    } else if (str == "elif") {
-        tokType = TokenType::KwElif;
-    } else if (str == "else") {
-        tokType = TokenType::KwElse;
-    } else if (str == "for") {
-        tokType = TokenType::KwFor;
-    } else if (str == "not") {
-        tokType = TokenType::KwNot;
-    } else if (str == "and") {
-        tokType = TokenType::KwAnd;
-    } else if (str == "or") {
-        tokType = TokenType::KwOr;
-    } else if (str == "while") {
-        tokType = TokenType::KwWhile;
-    } else if (str == "in") {
-        tokType = TokenType::KwIn;
-    } 
-    // check if type
-    else if (str == "int") {
-        tokType = TokenType::KwInt;
-    } else if (str == "bool") {
-        tokType = TokenType::KwBool;
-    } else if (str == "char") {
-        tokType = TokenType::KwChar;
-    } else if (str == "float") {
-        tokType = TokenType::KwFloat;
-    } else if (str == "void") {
-        tokType = TokenType::KwVoid;
+    // count spaces
+    int spaces = 0;
+    while (peekChar() == ' ') {
+        advanceChar();
+        spaces++;
     }
-    else { // if not keyword or type then identifier
-        tokType = TokenType::Identifier;
+
+    if (indentStack_.empty()) {
+        throw std::runtime_error("Invalid starting intendation");
     }
-    return Token(tokType, str);
+
+    // if additional indent
+    if (spaces > indentStack_.top()) {
+        indentStack_.push(spaces);
+    } else { 
+        // create detents
+        while (!indentStack_.empty() && spaces > indentStack_.top()) {
+            indentStack_.pop();
+            pending_.push_back({TokenType::Detent, ""});
+        }
+        if (spaces != indentStack_.top()) {
+            throw std::runtime_error("Indents do not match");
+        }
+    }
+
+    Token t = pending_.front();
+    pending_.pop_front();
+    return t;
+}
+
+Token Lexer::scanWord() {
+    size_t start = pos_;
+    while (std::isalnum(peekChar()) || peekChar() == '_')
+        advanceChar();
+
+    std::string_view text(&source_[start], pos_ - start);
+
+    if (text == "true" || text == "false")
+        return {TokenType::BoolLit, std::string(text)};
+
+    if (auto it = WORD_OPERATORS.find(text); it != WORD_OPERATORS.end())
+        return {it->second, std::string(text)};
+
+    if (auto it = KEYWORDS.find(text); it != KEYWORDS.end())
+        return {it->second, std::string(text)};
+
+    return {TokenType::Identifier, std::string(text)};
 }
 
 Token Lexer::scanNumber() {
-    std::string str;
+    size_t start = pos_;
     bool isFloat = false;
 
-    // Integer part
-    while (std::isdigit(peekChar())) {
-        str += advanceChar();
-    }
+    while (std::isdigit(peekChar()))
+        advanceChar();
 
-    // Fractional part
     if (peekChar() == '.' && std::isdigit(peekNextChar())) {
         isFloat = true;
-        str += advanceChar(); // consume '.'
-
-        while (std::isdigit(peekChar())) {
-            str += advanceChar();
-        }
+        advanceChar();
+        while (std::isdigit(peekChar()))
+            advanceChar();
     }
-    return Token{isFloat ? TokenType::FloatLit : TokenType::IntLit, str};
 
+    std::string_view text(&source_[start], pos_ - start);
+    return {isFloat ? TokenType::FloatLit : TokenType::IntLit, std::string(text)};
 }
 
 Token Lexer::scanString() {
-    if (advanceChar() != '"') { // also skips " so next pos is char
-        throw std::runtime_error("Called scanString on nonstring token");
+    advanceChar(); // consume opening "
+
+    size_t start = pos_;
+    while (peekChar() != '"' && !isAtEnd())
+        advanceChar();
+
+    if (isAtEnd()) {
+        throw std::runtime_error("unterminated string");
     }
-    char curr = advanceChar();
-    std::string str = "";
-    while (curr != '"' && curr != '\0') {
-        str += curr;
-        curr = advanceChar();
-    }
-    if (curr == '\0') { // string not terminated
-        throw std::runtime_error("string not terminated EOF reached");
-    }
-    return Token{TokenType::StringLit, str};
+
+    std::string_view text(&source_[start], pos_ - start);
+    advanceChar(); // closing "
+
+    return {TokenType::StringLit, std::string(text)};
 }
 
-Token Lexer::scanOperatorOrPunctOrNewline() {
-    char curr = advanceChar();
-    std::string str = "";
-    str += curr; // add the read curr to str
-    TokenType tokType = TokenType::Eof;
-    switch (curr) {
-        // handle 1 char ops/punct first
+Token Lexer::scanSymbol() {
+    char c = peekChar();
 
-        // parens
-        case '(':
-            tokType = TokenType::LParen;
-            break;
-        case ')':
-            tokType = TokenType::RParen;
-            break;
-        case '{':
-            tokType = TokenType::LBrace;
-            break;
-        case '}':
-            tokType = TokenType::RBrace;
-            break;
-        case '[':
-            tokType = TokenType::LBracket;
-            break;
-        case ']':
-            tokType = TokenType::RBracket;
-            break;
-
-        // other punct
-        case ',':
-            tokType = TokenType::Comma;
-            break;
-        case ':':
-            tokType = TokenType::Colon;
-            break;
-
-        // arith ops
-        case '+':
-            tokType = TokenType::Plus;
-            break;
-        case '-': // handle - and -> case
-            if (peekChar() == '>') {
-                tokType = TokenType::Arrow;
-                // increment to consume '>'
-                str += advanceChar(); // add to str
-            } else {
-                tokType = TokenType::Minus;
-            }
-            break;
-        case '*':
-            tokType = TokenType::Star;
-            break;
-        case '/':
-            tokType = TokenType::Slash;
-            break;
-        case '=': // handle = and == case
-            if (peekChar() == '=') {
-                tokType = TokenType::Equals;
-                // increment to consume second '='
-                str += advanceChar(); // add to str
-                
-            } else {
-                tokType = TokenType::Assign;
-            }
-            break;
-        case '<': // handle < and <= case
-            if (peekChar() == '=') {
-                tokType = TokenType::LEqCompare;
-                // increment to consume second '='
-                str += advanceChar(); // add to str
-            } else {
-                tokType = TokenType::LCompare;
-            }
-            break;
-        case '>': // handle > and >= case
-            if (peekChar() == '=') {
-                tokType = TokenType::GEqCompare;
-                // increment to consume second '='
-                str += advanceChar(); // add to str
-            } else {
-                tokType = TokenType::GCompare;
-            }
-            break;
-        case '!': // !=
-            if (peekChar() == '=') {
-                tokType = TokenType::NotEq;
-                // increment to consume second '='
-                str += advanceChar(); // add to str
-            } else {
-                throw std::runtime_error("= must follow ! in a valid != expression");
-            }
-            break;
-        case '\n': 
-            tokType = TokenType::Newline;
-            break;
-        default:
-            tokType = TokenType::Invalid;
-            break;
+    if (c == '\n') {
+        return handleNewline();
     }
-    return Token{tokType, str};
+
+    if (auto it = PUNCTUATION.find(c); it != PUNCTUATION.end()) {
+        advanceChar();
+        return {it->second, std::string(1, c)};
+    }
+
+    for (auto [text, kind] : OPERATORS) {
+        if (source_.compare(pos_, text.size(), text) == 0) {
+            pos_ += text.size();
+            return {kind, std::string(text)};
+        }
+    }
+
+    advanceChar();
+    return {TokenType::Invalid, std::string(1, c)};
 }
 
 Token Lexer::makeEofToken() const {
-    // Must return a valid EOF token
-    return Token{TokenType::Eof, ""};
+    return {TokenType::Eof, ""};
 }
 
-} 
+}
