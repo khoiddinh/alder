@@ -9,24 +9,28 @@ enum class TokenType {
     Eof,
     Invalid,
     Newline,
+    Indent,
+    Detent,
 
     // identifiers & literals
     Identifier,
     IntLit,
     FloatLit,
     StringLit,
-    // TODO: add char lit    
+    BoolLit,
+    // TODO: add char lit  
 
+    /*
     // type names
     KwInt, // default 64 bit
     KwBool,
     KwChar,
     KwFloat, // default 64 bit // idx: 10
     KwVoid,
+    */
 
     // keywords
-    BoolLit, // handled in kword parse bc alpha (true, false)
-
+    
     KwDef,
     KwFinal,
     KwReturn,
@@ -34,32 +38,40 @@ enum class TokenType {
     KwElif,
     KwElse,
     KwFor,
-    KwNot, // idx: 20
-    KwAnd,
-    KwOr,
     KwWhile,
     KwIn,
 
     // punctuation
     LParen, RParen,
-    LBrace, RBrace,
     LBracket, RBracket,
     Comma, Colon, 
-    Arrow, 
 
     // operators
-    Plus,       // +
-    Minus,      // -
-    Star,       // *
-    Slash,       // /
-    Assign,     // =
-    Equals,     // ==
-    LEqCompare, // <=
-    GEqCompare, // >=
-    LCompare,   // <
-    GCompare,   // >
-    NotEq,      // !=
+    // Word operators
+    Not,        // not
+    And,        // and
+    Or,         // or
+
+    // symbol operators
+    LogicRightBitShift, // >>> (preserves MSB)
+    Arrow,              // ->
+    Equals,             // ==
+    NotEquals,          // !=
+    LessEqCompare,      // <=
+    GreaterEqCompare,   // >=
+    LeftBitShift,       // <<
+    RightBitShift,      // >>
     
+    
+    Plus,               // +
+    Minus,              // -
+    Star,               // *
+    Slash,              // /
+    Assign,             // =
+    LessCompare,        // <
+    GreaterCompare,     // >
+    
+
 };
 
 struct Token {
