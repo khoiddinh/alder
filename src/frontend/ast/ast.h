@@ -29,13 +29,13 @@ struct GlobalStmt {
 struct Func {
     Identifier name;
     std::vector<Param> params;
-    Identifier retType;
+    ExprUP retTypeExpr;
     BlockUP body; // function body
 };
 
 struct Param {
     Identifier name;
-    Identifier type; 
+    ExprUP type; 
 };
 
 // * Blocks (list of statements); Can't exist in global scope
@@ -61,7 +61,7 @@ struct Identifier { std::string name; };
 // * Statement types
 struct VarDecl {
     bool isFinal; // immutable
-    Identifier type; 
+    ExprUP typeExpr; 
     Identifier name;
     ExprUP init;
 };
@@ -69,7 +69,7 @@ struct VarDecl {
 // * Bindings (for loop)
 struct VarBinding {
     Identifier name;
-    Identifier type;
+    ExprUP typeExpr;
 };
 
 struct Binding {
@@ -118,19 +118,21 @@ struct Expr : std::variant<
     Binary,
     Call,
     Assignment,
-    Index
+    Indices
 > {
     using variant::variant;
 };
+
 // * Assignment (x = [expr])
 struct Assignment {
     Identifier target;
     ExprUP value;
 };
 // list index a[0]; target[index]
-struct Index {
+// a[0, 5]; dict[int, string]
+struct Indices {
     ExprUP target;
-    ExprUP index;
+    std::vector<ExprUP> indices;
 };
 
 // * expression types

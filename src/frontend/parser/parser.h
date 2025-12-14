@@ -70,6 +70,7 @@ private:
     ast::StmtUP parseExprStmt();                            // e.g. foo(5)
 
     // * Expressions Parser (Pratt Parser)
+    ast::ExprUP parseTypeExpr(); // parses type expression
     ast::ExprUP parseExpr(int minBP); // handles variable assignment (i.e. x=5)
 
     // helpers for parseExpr

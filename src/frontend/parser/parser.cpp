@@ -144,7 +144,7 @@ Func Parser::parseFunc() {
     }
     consume(TokenType::RParen, "expected ')' to close argument list");
     consume(TokenType::Arrow, "expected '->' after params");
-    fn.retType = Identifier{ consume(TokenType::Identifier, "expected function name").lexeme };
+    fn.retTypeExpr = parseTypeExpr();
     consume(TokenType::Colon, "expected ':' after type");
     fn.body = parseBlock();
     return fn;
@@ -235,7 +235,7 @@ StmtUP Parser::parseVarDecl() {
     }
     varDecl.name = Identifier{ consume(TokenType::Identifier, "Expected variable name declaration").lexeme };
     consume(TokenType::Colon, "Expected colon after type delcaration");
-    varDecl.type = Identifier{ consume(TokenType::Identifier, "Expected variable name after type").lexeme };
+    varDecl.typeExpr = parseTypeExpr();
     consume(TokenType::Assign, "Expected '=' after variable declaration");
     varDecl.init = parseExpr(0);
     return std::make_unique<Stmt>(std::move(varDecl));
@@ -319,7 +319,7 @@ VarBinding Parser::parseVarBinding() {
     VarBinding vb{};
     vb.name = Identifier{ consume(TokenType::Identifier, "Expected variable name").lexeme };
     consume(TokenType::Colon, "Expected ':' after variable name");
-    vb.type = Identifier{ consume(TokenType::Identifier, "Expected type name").lexeme };
+    vb.typeExpr = parseTypeExpr();
     return vb;
 }
 
@@ -428,6 +428,10 @@ StmtUP Parser::parseExprStmt() {
 }
 
 // ** Expression Parser (Pratt Parser)
+ExprUP Parser::parseTypeExpr() {
+    return parseExpr(0);
+}
+
 ExprUP Parser::parseExpr(int minBP) {
     Token token = advance();
     ExprUP left = nud(token);
@@ -515,10 +519,17 @@ ExprUP Parser::led(const Token& token, ExprUP left) {
         
         // Indexing: a[0]
         case TokenType::LBracket: {
-            ExprUP index = parseExpr(0);
+            std::vector<ExprUP> indexExpr;
+
+            // at least index
+            indexExpr.push_back(parseExpr(0));
+            while (check(TokenType::Comma)) {
+                consume(TokenType::Comma, "Expected comma to continue index list");
+                indexExpr.push_back(parseExpr(0));
+            }
             consume(TokenType::RBracket, "expected ']'");
             return std::make_unique<Expr>(
-                Index{std::move(left), std::move(index)}
+                Indices{std::move(left), std::move(indexExpr)}
             );
         }
         
