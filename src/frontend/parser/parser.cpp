@@ -504,14 +504,10 @@ ExprUP Parser::led(const Token& token, ExprUP left) {
     switch (token.type) {
         // Assignment
         case TokenType::Assign: {
-            if (!std::holds_alternative<Identifier>(*left)) {
-                throw std::runtime_error("Invalid assignment target");
-            }
-            Identifier target = std::get<Identifier>(*left);
             int assignBP = op_precedence::getAssignBindingPower();
             ExprUP value = parseExpr(assignBP - 1);  // Right-associative
             return std::make_unique<Expr>(Assignment{
-                std::move(target),
+                std::move(left),
                 std::move(value)
             });
         }

@@ -50,7 +50,7 @@ struct Block {
 struct Stmt;
 using StmtUP = std::unique_ptr<Stmt>;
 // Sum type for statements
-struct Stmt : std::variant<Block, VarDecl, ForIn, While, BrChain, Return, ExprStmt> {
+struct Stmt : std::variant<VarDecl, ForIn, While, BrChain, Return, ExprStmt> {
     using variant::variant;
 };
 

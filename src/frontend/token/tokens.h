@@ -49,6 +49,7 @@ enum class TokenType {
 struct Token {
     TokenType type;
     std::string lexeme; // chars from input
+    int line; // line number it appears on
     std::optional<OperatorKind> op;
 };
 

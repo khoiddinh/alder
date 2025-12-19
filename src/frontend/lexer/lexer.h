@@ -71,6 +71,7 @@ private:
 
     std::string source_;
     size_t pos_ = 0;
+    int line_ = 1;
     std::deque<tok::Token> pending_;
     std::stack<int> indentStack_;
     bool isAtEnd() const;
