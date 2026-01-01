@@ -97,7 +97,7 @@ void Parser::consumeAtLeastOneNewline(const char* msg) {
 
 Decl Parser::parseDecl() {
     Decl decl{};
-    if (check(TokenType::KwDef)) {
+    if (check(TokenType::KwFn)) {
         decl = parseFunc();
     } else {
         decl = parseGlobalStmt();
@@ -129,7 +129,7 @@ Decl Parser::parseDecl() {
 /// @return A Function Declaration statement AST node.
 Func Parser::parseFunc() {
     Func fn{};
-    consume(TokenType::KwDef, "expected function declaration");
+    consume(TokenType::KwFn, "expected function declaration");
     fn.name = Identifier{ consume(TokenType::Identifier, "expected function name").lexeme };
     consume(TokenType::LParen, "function expected '('");
 

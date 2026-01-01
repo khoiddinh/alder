@@ -23,7 +23,7 @@ private:
 
     /// @brief Lookup table for mapping keyword strings to tokens
     static inline const std::unordered_map<std::string_view, tok::TokenType> KEYWORDS = {
-        {"def", tok::TokenType::KwDef},
+        {"fn", tok::TokenType::KwFn},
         {"final", tok::TokenType::KwFinal},
         {"return", tok::TokenType::KwReturn},
         {"if", tok::TokenType::KwIf},

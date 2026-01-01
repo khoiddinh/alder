@@ -124,8 +124,9 @@ struct Expr : std::variant<
 };
 
 // * Assignment (x = [expr])
+// OR A[i] = [expr] which is why target is ExprUP
 struct Assignment {
-    Identifier target;
+    ExprUP target;
     ExprUP value;
 };
 // list index a[0]; target[index]
@@ -160,6 +161,8 @@ struct ExprStmt {
 };
 
 // ** Literals **
+// TODO: Change bool, string int to respective type instead of string?
+// TODO: Have to handle if ints, float are infinite size by default
 struct IntLit { std::string lexeme; };  
 struct FloatLit { std::string lexeme; };
 struct StringLit { std::string value; };

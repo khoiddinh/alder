@@ -22,7 +22,7 @@ enum class TokenType {
 
     // keywords
     
-    KwDef,
+    KwFn,
     KwFinal,
     KwReturn,
     KwIf,
