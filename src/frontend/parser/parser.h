@@ -3,9 +3,10 @@
 #include <string>
 #include <optional>
 #include <functional>
-#include "ast.h"   
-#include "tokens.h"  
+#include "ast.h"
+#include "tokens.h"
 #include "operator_precedence.h"
+#include "diagnostic.h"
 
 
 namespace alder::parser {
@@ -33,6 +34,10 @@ private:
     const token::Token& advance();           // returns token then incr
     bool check(token::TokenType t) const;    // matches without consuming
     const token::Token& consume(token::TokenType t, const char* msg); // require token or throw
+
+    // Build a CompileError using the current token's location
+    [[nodiscard]] diag::CompileError error(const std::string& msg) const;
+    [[nodiscard]] diag::CompileError errorAt(const token::Token& tok, const std::string& msg) const;
     
     // * Newline handlers
     void consumeOptionalNewlines();
