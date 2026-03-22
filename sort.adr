@@ -1,0 +1,38 @@
+fn merge(l1: list[int], l2: list[int]) -> list[int]:
+	ret: list[int] = []
+	i: int = 0
+	j: int = 0
+	while (i < len(l1) and j < len(l2)):
+		if l1[i] <= l2[j]:
+			append(ret, l1[i])
+			i = i + 1
+		else:
+			append(ret, l2[j])
+			j = j + 1
+	if i < len(l1):
+		while (i < len(l1)):
+			append(ret, l1[i])
+			i = i + 1
+	elif j < len(l1):
+		while (j < len(l2)):
+			append(ret, l2[j])
+			j = j + 1
+	
+	return ret
+
+
+fn sort(l: list[int]) -> list[int]:
+	if len(l) == 0:
+		return []
+	elif len(l) == 1:
+		return l
+	
+	mid: int = len(l) / 2
+	l1: list[int] = sort(l[:mid])
+	l2: list[int] = sort(l[mid:])
+	return merge(l1, l2)
+
+fn main() -> int:
+	test: list[int] = [1, 45, 3, 4, 6, 8, 10, 2, -1, -5, -5]
+	print(sort(test))
+	return 0
