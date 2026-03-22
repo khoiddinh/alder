@@ -23,7 +23,7 @@ private:
 
     /// @brief Lookup table for mapping keyword strings to tokens
     static inline const std::unordered_map<std::string_view, tok::TokenType> KEYWORDS = {
-        {"def", tok::TokenType::KwDef},
+        {"fn", tok::TokenType::KwFn},
         {"final", tok::TokenType::KwFinal},
         {"return", tok::TokenType::KwReturn},
         {"if", tok::TokenType::KwIf},
@@ -62,6 +62,7 @@ private:
     
         {"+", tok::OperatorKind::Plus},
         {"-", tok::OperatorKind::Minus},
+        {"*", tok::OperatorKind::Star},
         {"/", tok::OperatorKind::Slash},
         {"<", tok::OperatorKind::LessCompare},
         {">", tok::OperatorKind::GreaterCompare}
@@ -71,9 +72,11 @@ private:
 
     std::string source_;
     size_t pos_ = 0;
+    int line_ = 1;
+    int col_  = 1;          // current column (1-based, advances with each char)
+    int tokenStartCol_ = 1; // column at the start of the token being scanned
     std::deque<tok::Token> pending_;
     std::stack<int> indentStack_;
-    bool isAtEnd() const;
     char peekChar() const;
     char peekNextChar() const;
     char advanceChar();

@@ -5,12 +5,28 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Your library / sources
-add_library(alder STATIC
-    src/frontend/lexer.cpp
-    src/frontend/parser.cpp
+# Core compiler library
+add_library(alder_core STATIC
+    src/frontend/lexer/lexer.cpp
+    src/frontend/parser/parser.cpp
+    src/frontend/parser/operator_precedence.cpp
+    src/frontend/semantic/semantic.cpp
+    src/frontend/codegen/transpiler.cpp
+    src/frontend/diagnostic/diagnostic.cpp
 )
-target_include_directories(alder PUBLIC include)
+target_include_directories(alder_core PUBLIC
+    src/frontend/token
+    src/frontend/lexer
+    src/frontend/ast
+    src/frontend/parser
+    src/frontend/semantic
+    src/frontend/codegen
+    src/frontend/diagnostic
+)
+
+# Compiler executable
+add_executable(alder src/main.cpp)
+target_link_libraries(alder PRIVATE alder_core)
 
 # ---- Catch2 (v3) via FetchContent ----
 include(FetchContent)
@@ -26,7 +42,7 @@ add_executable(alder_tests
     tests/test_lexer.cpp
     tests/test_parser.cpp
 )
-target_link_libraries(alder_tests PRIVATE alder Catch2::Catch2WithMain)
+target_link_libraries(alder_tests PRIVATE alder_core Catch2::Catch2WithMain)
 
 include(CTest)
 include(Catch)

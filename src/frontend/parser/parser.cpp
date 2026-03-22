@@ -1,9 +1,7 @@
-
 #include "parser.h"
 
 #include <vector>
 #include <functional>
-#include <iostream> // TODO: DEBUG
 #include "../token/tokens.h"
 #include "operator_precedence.h"
 
@@ -12,26 +10,23 @@ namespace alder::parser {
 using namespace alder::ast;
 using namespace alder::token;
 
-// ** PUBLIC API **
+// ** Public API **
 
 Parser::Parser(std::vector<Token> tokens) {
     tokens_ = std::move(tokens);
     current_ = 0;
 }
 
-// * Top-level parser method
 Module Parser::parse() {
     Module module = Module{std::vector<Decl>{}};
-    // rm leading newlines
     consumeOptionalNewlines();
-
-    while (!atEnd()) {
+    while (!atEnd())
         module.declarations.push_back(parseDecl());
-    }
     return module;
 }
 
-// ** PUBLIC TOKEN HANDLERS **
+// ** Public token handlers **
+
 bool Parser::atEnd() const {
     return tokens_[current_].type == TokenType::Eof;
 }
@@ -40,18 +35,17 @@ const Token& Parser::peek() const {
     return tokens_[current_];
 }
 
-// ** PRIVATE TOKEN HANDLERS **
+// ** Private token handlers **
+
 const Token& Parser::peekNext() const {
-    if (current_+1 >= tokens_.size()) {
-        throw std::runtime_error("Tried to peekNext past end of token stream");
-    }
-    return tokens_[current_+1];
+    if (current_ + 1 >= tokens_.size())
+        throw error("unexpected end of input");
+    return tokens_[current_ + 1];
 }
 
 const Token& Parser::advance() {
-    if (atEnd()) {
-        throw std::runtime_error("Tried to read past EOF, check matching parens");
-    }
+    if (atEnd())
+        throw error("unexpected end of input");
     return tokens_[current_++];
 }
 
@@ -60,376 +54,204 @@ bool Parser::check(TokenType t) const {
 }
 
 const Token& Parser::consume(TokenType t, const char* msg) {
-    if (check(t)) {
-        return advance();
-    } else {
-        throw std::runtime_error(msg);
-    }
+    if (check(t)) return advance();
+    throw error(msg);
 }
 
-// ** NEWLINE HANDLERS **
+// ** Error helpers **
+
+diag::CompileError Parser::error(const std::string& msg) const {
+    return errorAt(peek(), msg);
+}
+
+diag::CompileError Parser::errorAt(const Token& tok, const std::string& msg) const {
+    return diag::CompileError(msg, {tok.line, tok.col});
+}
+
+// ** Newline handlers **
+
 void Parser::consumeOptionalNewlines() {
-    while (check(TokenType::Newline) && !check(TokenType::Eof)) {
+    while (check(TokenType::Newline) && !check(TokenType::Eof))
         advance();
-    }
 }
 
 void Parser::consumeNewline(const char* msg) {
-    if (check(TokenType::Newline)) {
+    if (check(TokenType::Newline))
         advance();
-    } else {
-        std::cout << (int) peek().type  << " " << (int) peekNext().type << std::endl;    
-
-        throw std::runtime_error(msg);
-    }
+    else
+        throw error(msg);
 }
-/// @brief Requires consumption of at least one newline but will consume greedily
-/// @param msg error message thrown if less than one newline to consume
+
 void Parser::consumeAtLeastOneNewline(const char* msg) {
     consumeNewline(msg);
     consumeOptionalNewlines();
 }
 
-
-// ** PARSER LOGIC **
-
-// ** Top Level Declaration Parsers **
+// ** Top-level declarations **
 
 Decl Parser::parseDecl() {
     Decl decl{};
-    if (check(TokenType::KwDef)) {
+    if (check(TokenType::KwFn))
         decl = parseFunc();
-    } else {
+    else
         decl = parseGlobalStmt();
-    }
-    // rm trailing newlines
     consumeOptionalNewlines();
     return decl;
 }
 
-/// @brief Parses function declaration statement
-///
-/// Grammar:
-///     arg = identifier ":" identifier , (only if arg to follow)
-///     func ::= def "(" arg* ")" -> identifier ":"
-///
-/// Consumes:
-///     - KwDef
-///     - LParen
-///     - Identifier (variable name)
-///     - Colon
-///     - Identifier (type name)
-///     - ...
-///     - RParen
-///     - Arrow
-///     - Identifier (return type)
-///     - Colon
-///     - Block
-///
-/// @return A Function Declaration statement AST node.
 Func Parser::parseFunc() {
     Func fn{};
-    consume(TokenType::KwDef, "expected function declaration");
+    consume(TokenType::KwFn, "expected 'fn' to start function declaration");
     fn.name = Identifier{ consume(TokenType::Identifier, "expected function name").lexeme };
-    consume(TokenType::LParen, "function expected '('");
+    consume(TokenType::LParen, "expected '(' after function name");
 
-    std::vector<ExprUP> params;
     while (!check(TokenType::RParen) && !check(TokenType::Eof)) {
-        params.push_back(parseExpr(0));
-        if (check(TokenType::RParen)) { 
-            break;
-        } else {
-            consume(TokenType::Comma, "expected ',' or ')' in argument list");
-        }
+        Param p{};
+        p.name = Identifier{ consume(TokenType::Identifier, "expected parameter name").lexeme };
+        consume(TokenType::Colon, "expected ':' after parameter name");
+        p.type = parseTypeExpr();
+        fn.params.push_back(std::move(p));
+        if (check(TokenType::Comma)) advance();
     }
-    consume(TokenType::RParen, "expected ')' to close argument list");
-    consume(TokenType::Arrow, "expected '->' after params");
+    consume(TokenType::RParen, "expected ')' to close parameter list");
+    consume(TokenType::Arrow, "expected '->' after parameters");
     fn.retTypeExpr = parseTypeExpr();
-    consume(TokenType::Colon, "expected ':' after type");
+    consume(TokenType::Colon, "expected ':' after return type");
     fn.body = parseBlock();
     return fn;
 }
 
-// * Parse Global Statements
 GlobalStmt Parser::parseGlobalStmt() {
-    return GlobalStmt { parseStmt() };
+    return GlobalStmt{ parseStmt() };
 }
 
+// ** Statement parsers **
 
-// ** Statement Parsers **
 BlockUP Parser::parseBlock() {
     Block block{};
-    consumeAtLeastOneNewline("Expected \\n to start block");
-    consume(TokenType::Indent, "Expected indent");
-
-    // allow optional new lines to start block
+    consumeAtLeastOneNewline("expected newline to start block");
+    consume(TokenType::Indent, "expected indent");
     consumeOptionalNewlines();
     while (!check(TokenType::Dedent) && !check(TokenType::Eof)) {
         block.body.push_back(parseStmt());
-        consumeOptionalNewlines(); // opt newlines between statements
+        consumeOptionalNewlines();
     }
-    // consume end token
-    consume(TokenType::Dedent, "Expected dedent");
+    consume(TokenType::Dedent, "expected dedent to close block");
     return std::make_unique<Block>(std::move(block));
 }
 
-// * Parse Statement (Non Top-Level)
 StmtUP Parser::parseStmt() {
-    if (check(TokenType::KwIf)) {
-        return parseBranch();
-    } 
-    if (check(TokenType::KwWhile)) {
-        return parseWhile();
-    }
-    if (check(TokenType::KwFor)) {
-        return parseForIn();
-    }
+    if (check(TokenType::KwReturn)) return parseReturn();
+    if (check(TokenType::KwIf))     return parseBranch();
+    if (check(TokenType::KwWhile))  return parseWhile();
+    if (check(TokenType::KwFor))    return parseForIn();
 
-    // lambda func helper
-    bool startsVarDecl = [this]() {
-        return check(TokenType::Identifier) && peekNext().type == TokenType::Colon;
-    }();
-    if (check(TokenType::KwFinal) || startsVarDecl) {
+    bool startsVarDecl = check(TokenType::Identifier) && peekNext().type == TokenType::Colon;
+    if (check(TokenType::KwFinal) || startsVarDecl)
         return parseVarDecl();
-    }
 
-    // otherwise its an expr stmt
-    StmtUP stmt = parseExprStmt();
-
-    // consume statement end
-    if (check(TokenType::Newline)) {
-        consumeAtLeastOneNewline("Expected \\n");
-        return;
-    }
-    if (check(TokenType::Dedent) || check(TokenType::Eof)) {
-        return;
-    }
-    throw std::runtime_error("Expected end of statement");
-    return stmt;
+    return parseExprStmt();
 }
 
-// * Variable Declaration
-/// @brief Parses variable declaration statement
-///
-/// Grammar:
-///     var_decl ::= ["final"] identifier ":" identifier (type_name) "=" expr
-///
-/// Consumes:
-///     - optional `KwFinal`
-///     - Identifier (variable name)
-///     - Colon
-///     - Identifier (type name)
-///     - Operator('=')
-///     - expression
-///
-/// @return A VarDecl statement AST node.
 StmtUP Parser::parseVarDecl() {
-    VarDecl varDecl = VarDecl{};
-
-    // handle optionally declaring variable final (const)
+    VarDecl varDecl{};
     if (check(TokenType::KwFinal)) {
         varDecl.isFinal = true;
-        consume(TokenType::KwFinal, "Final variable must be declared as final");
-    } else {
-        varDecl.isFinal = false;
+        advance();
     }
-    varDecl.name = Identifier{ consume(TokenType::Identifier, "Expected variable name declaration").lexeme };
-    consume(TokenType::Colon, "Expected colon after type delcaration");
+    varDecl.name = Identifier{ consume(TokenType::Identifier, "expected variable name").lexeme };
+    consume(TokenType::Colon, "expected ':' after variable name");
     varDecl.typeExpr = parseTypeExpr();
-    consume(TokenType::Assign, "Expected '=' after variable declaration");
+    consume(TokenType::Assign, "expected '=' in variable declaration");
     varDecl.init = parseExpr(0);
     return std::make_unique<Stmt>(std::move(varDecl));
 }
 
-
-// * For Loop
-/// @brief Parses for loop statement
-///
-/// Grammar:
-///     for [binding] in [expr]:
-///         [block]
-///
-/// Consumes:
-///     - KwFor
-///     - Binding
-///     - KwIn
-///     - Expr
-///     - Colon
-///     - Newline
-///     - Indent
-///     - Block
-///     - Dedent
-///
-/// @return A ForIn statement AST node.
 StmtUP Parser::parseForIn() {
     ForIn forIn{};
-
-    consume(TokenType::KwFor, "For loop must start with keyword 'for'");
+    consume(TokenType::KwFor, "expected 'for'");
     forIn.binding = parseBinding();
-    consume(TokenType::KwIn, "Expected keyword 'in'");
-    // TODO: add functionality for tuple iteratable (to match binding)
+    consume(TokenType::KwIn, "expected 'in' after binding");
     forIn.iterable = parseExpr(0);
-    consume(TokenType::Colon, "Expected ':' after expression");
-    consumeAtLeastOneNewline("Expected \\n after for loop statement");
-
+    consume(TokenType::Colon, "expected ':' after iterable");
+    forIn.body = parseBlock();
     return std::make_unique<Stmt>(std::move(forIn));
 }
 
-// * Binding Parsers (for the for loop)
-/// @brief Parses binding (tuple)
-///
-/// Grammar:
-///     var_binding ::= Identifier ':' Identifier
-///
-/// Consumes:
-///     - LParen
-///     - Var Binding
-///     - RParen (to close) || Comma (to continue)
-///     - Var Binding
-///     - ...
-///
-/// @return A Binding AST node.
 Binding Parser::parseBinding() {
     Binding binding{};
-    consume(TokenType::LParen, "Expected '(' at binding start");
-    // at least one var binding
-    binding.varBindings.push_back(parseVarBinding()); // avoid copy via rvalue
-
+    consume(TokenType::LParen, "expected '(' to start binding");
+    binding.varBindings.push_back(parseVarBinding());
     while (check(TokenType::Comma)) {
         advance();
         binding.varBindings.push_back(parseVarBinding());
     }
-
-    consume(TokenType::RParen, "Expected ')' to close binding");
+    consume(TokenType::RParen, "expected ')' to close binding");
     return binding;
 }
 
-/// @brief Parses singular variable binding
-///
-/// Grammar:
-///     var_binding ::= Identifier ':' Identifier
-///
-/// Consumes:
-///     - Identifier
-///     - Colon
-///     - Identifier
-///
-/// @return A VarBinding AST node.
 VarBinding Parser::parseVarBinding() {
     VarBinding vb{};
-    vb.name = Identifier{ consume(TokenType::Identifier, "Expected variable name").lexeme };
-    consume(TokenType::Colon, "Expected ':' after variable name");
+    vb.name = Identifier{ consume(TokenType::Identifier, "expected variable name in binding").lexeme };
+    consume(TokenType::Colon, "expected ':' after variable name");
     vb.typeExpr = parseTypeExpr();
     return vb;
 }
 
-
-// * While loop
-/// @brief Parses while loop statement
-///
-/// Grammar:
-///     while [expr]:
-///         [block]
-///
-/// Consumes:
-///     - KwWhile
-///     - Expr
-///     - Colon
-///     - Newline
-///     - Indent
-///     - Block
-///     - Dedent
-///
-/// @return A While statement AST node.
 StmtUP Parser::parseWhile() {
     While whileLoop{};
-
-    consume(TokenType::KwWhile, "While loop must start with keyword 'while'");
+    consume(TokenType::KwWhile, "expected 'while'");
     whileLoop.cond = parseExpr(0);
-    consume(TokenType::Colon, "Expected ':' after expression");
-    consumeAtLeastOneNewline("Expected '\\n' after while statement");
-    consume(TokenType::Indent, "Expected indent to begin while block");
-    whileLoop.body = parseBlock(); 
-    consume(TokenType::Dedent, "Expected dedent after while block");
+    consume(TokenType::Colon, "expected ':' after condition");
+    whileLoop.body = parseBlock();
     return std::make_unique<Stmt>(std::move(whileLoop));
 }
 
-// * Conditional statements (if, elif, else)
-/// @brief Parses conditional statement
-///
-/// Grammar:
-///     if [expr]:
-///         [block]
-///     elif [expr]: (optional)
-///         [block]
-///     ...
-///     else: (optional)
-///         [block]
-/// Consumes:
-///     - KwIf
-///     - Expr
-///     - Colon
-///     - Newline
-///     - Indent
-///     - Block
-///     - Dedent
-///
-/// @return A While statement AST node.
 StmtUP Parser::parseBranch() {
     BrChain brChain{};
-    // if
-    brChain.ifBlock = parseConditionalBranch(TokenType::KwIf, "Expected 'if' keyword");
-
-    // newlines in between branch statements
+    brChain.ifBlock = parseConditionalBranch(TokenType::KwIf, "expected 'if'");
     consumeOptionalNewlines();
 
-    // between 0 and arbitrary elif branches
     while (check(TokenType::KwElif)) {
-        // newlines in between branch statements
         consumeOptionalNewlines();
-        brChain.elifBranches.push_back(parseConditionalBranch(TokenType::KwElif, "Expected 'elif"));
+        brChain.elifBranches.push_back(parseConditionalBranch(TokenType::KwElif, "expected 'elif'"));
     }
-    // newlines in between branch statements
     consumeOptionalNewlines();
 
     if (check(TokenType::KwElse)) {
-        consume(TokenType::KwElse, "Expected 'else' but found other token");
-        consume(TokenType::Colon, "Expected ':' after else");
+        consume(TokenType::KwElse, "expected 'else'");
+        consume(TokenType::Colon, "expected ':' after 'else'");
         brChain.elseBlock = parseBlock();
     }
     return std::make_unique<Stmt>(std::move(brChain));
 }
 
-// Parse branch helper
 Branch Parser::parseConditionalBranch(TokenType kw, const char* context) {
     Branch b{};
- 
     consume(kw, context);
     b.cond = parseExpr(0);
-    consume(TokenType::Colon, "Expected ':'");
+    consume(TokenType::Colon, "expected ':' after condition");
     b.body = parseBlock();
-
     return b;
 }
 
-// * Return parser
 StmtUP Parser::parseReturn() {
     Return ret{};
-    consume(TokenType::KwReturn, "Return statement must start with 'return'");
+    consume(TokenType::KwReturn, "expected 'return'");
     ret.retExpr = parseExpr(0);
     return std::make_unique<Stmt>(std::move(ret));
 }
 
-// ** Expression Statement Parser
 StmtUP Parser::parseExprStmt() {
     ExprStmt exprStmt{};
     exprStmt.expr = parseExpr(0);
     return std::make_unique<Stmt>(std::move(exprStmt));
 }
 
-// ** Expression Parser (Pratt Parser)
+// ** Expression parser (Pratt) **
+
 ExprUP Parser::parseTypeExpr() {
-    return parseExpr(0);
+    return parseExpr(op_precedence::getAssignBindingPower());
 }
 
 ExprUP Parser::parseExpr(int minBP) {
@@ -443,11 +265,9 @@ ExprUP Parser::parseExpr(int minBP) {
     return left;
 }
 
-// already consume token in parseExpr
 ExprUP Parser::nud(const Token& token) {
     switch (token.type) {
-        // Literals
-        case TokenType::Identifier: 
+        case TokenType::Identifier:
             return std::make_unique<Expr>(Identifier{token.lexeme});
         case TokenType::IntLit:
             return std::make_unique<Expr>(IntLit{token.lexeme});
@@ -457,85 +277,72 @@ ExprUP Parser::nud(const Token& token) {
             return std::make_unique<Expr>(StringLit{token.lexeme});
         case TokenType::BoolLit:
             return std::make_unique<Expr>(BoolLit{token.lexeme});
-        
-        // List literal
+
         case TokenType::LBracket: {
             ListLit list{};
             while (!check(TokenType::RBracket) && !check(TokenType::Eof)) {
                 list.elements.push_back(parseExpr(0));
-                if (check(TokenType::RBracket)) {
-                    break;
-                } else {
-                    consume(TokenType::Comma, "Expected ','");
-                }
+                if (check(TokenType::RBracket)) break;
+                consume(TokenType::Comma, "expected ',' between list elements");
             }
-            consume(TokenType::RBracket, "Expected ']' to close list");
+            consume(TokenType::RBracket, "expected ']' to close list");
             return std::make_unique<Expr>(std::move(list));
         }
 
-        // grouping
         case TokenType::LParen: {
-            ExprUP groupedExpr = parseExpr(0); // zero because basically new expr
-            consume(TokenType::RParen, "expected ')' to close expression");
-            return groupedExpr; // parens don't create a node, only delegate order
+            ExprUP grouped = parseExpr(0);
+            consume(TokenType::RParen, "expected ')' to close grouped expression");
+            return grouped;
         }
-        
-        // prefix operators
-        case TokenType::Operator: {
-            OperatorKind opKind = token.op.value(); // throws if null
-            if (op_precedence::isPrefixOp(opKind)) {
-                throw std::runtime_error("Invalid prefix operator");
-            }
-            
-            ExprUP right = parseExpr(op_precedence::prefixBindingPower(token));
-            return std::make_unique<Expr>(Unary{
-                op_precedence::toUnaryOp(opKind), std::move(right)
-            });
-        }        
 
-        default: 
-            std::cout << (int) token.type << std::endl; // TODO: Debug
-            throw std::runtime_error("Unexpected token at start of expression");
+        case TokenType::Operator: {
+            OperatorKind opKind = token.op.value();
+            if (!op_precedence::isPrefixOp(opKind))
+                throw errorAt(token, "'" + token.lexeme + "' is not a valid prefix operator");
+            ExprUP right = parseExpr(op_precedence::prefixBindingPower(token));
+            return std::make_unique<Expr>(Unary{op_precedence::toUnaryOp(opKind), std::move(right)});
+        }
+
+        default:
+            throw errorAt(token, "unexpected token '" + token.lexeme + "'");
     }
 }
 
-
 ExprUP Parser::led(const Token& token, ExprUP left) {
     switch (token.type) {
-        // Assignment
         case TokenType::Assign: {
-            if (!std::holds_alternative<Identifier>(*left)) {
-                throw std::runtime_error("Invalid assignment target");
-            }
-            Identifier target = std::get<Identifier>(*left);
-            int assignBP = op_precedence::getAssignBindingPower();
-            ExprUP value = parseExpr(assignBP - 1);  // Right-associative
-            return std::make_unique<Expr>(Assignment{
-                std::move(target),
-                std::move(value)
-            });
+            ExprUP value = parseExpr(op_precedence::getAssignBindingPower() - 1);
+            return std::make_unique<Expr>(Assignment{std::move(left), std::move(value)});
         }
-        
-        
-        // Indexing: a[0]
-        case TokenType::LBracket: {
-            std::vector<ExprUP> indexExpr;
 
-            // at least index
-            indexExpr.push_back(parseExpr(0));
-            while (check(TokenType::Comma)) {
-                consume(TokenType::Comma, "Expected comma to continue index list");
-                indexExpr.push_back(parseExpr(0));
+        case TokenType::LBracket: {
+            // Parse optional start expression (omitted in e.g. nums[:5])
+            ExprUP first = nullptr;
+            if (!check(TokenType::Colon) && !check(TokenType::RBracket))
+                first = parseExpr(0);
+
+            if (check(TokenType::Colon)) {
+                // Slice: target[start:stop]
+                advance(); // consume ':'
+                ExprUP stop = nullptr;
+                if (!check(TokenType::RBracket))
+                    stop = parseExpr(0);
+                consume(TokenType::RBracket, "expected ']' to close slice");
+                return std::make_unique<Expr>(Slice{std::move(left), std::move(first), std::move(stop)});
             }
-            consume(TokenType::RBracket, "expected ']'");
-            return std::make_unique<Expr>(
-                Indices{std::move(left), std::move(indexExpr)}
-            );
+
+            // Regular index
+            std::vector<ExprUP> indices;
+            if (first) indices.push_back(std::move(first));
+            while (check(TokenType::Comma)) {
+                advance();
+                indices.push_back(parseExpr(0));
+            }
+            consume(TokenType::RBracket, "expected ']' to close index");
+            return std::make_unique<Expr>(Indices{std::move(left), std::move(indices)});
         }
-        
-        // handle function calls in expressions
+
         case TokenType::LParen: {
-            // LParen is already consumed in function 'led'
             std::vector<ExprUP> args;
             if (!check(TokenType::RParen)) {
                 while (true) {
@@ -545,31 +352,20 @@ ExprUP Parser::led(const Token& token, ExprUP left) {
                 }
             }
             consume(TokenType::RParen, "expected ')' to close argument list");
-            return std::make_unique<Expr>(
-                Call{ std::move(left), std::move(args) }
-            );
+            return std::make_unique<Expr>(Call{std::move(left), std::move(args)});
         }
 
-        // Binary operators
         case TokenType::Operator: {
             OperatorKind opKind = token.op.value();
-            if (op_precedence::isInfixOp(opKind)) {
-                ExprUP right = parseExpr(op_precedence::rightBindingPower(token));
-                return std::make_unique<Expr>(
-                    Binary{op_precedence::toBinaryOp(opKind), std::move(left), std::move(right)}
-                );
-            }
-            throw std::runtime_error("Unknown operator");
+            if (!op_precedence::isInfixOp(opKind))
+                throw errorAt(token, "'" + token.lexeme + "' cannot be used as a binary operator");
+            ExprUP right = parseExpr(op_precedence::rightBindingPower(token));
+            return std::make_unique<Expr>(Binary{op_precedence::toBinaryOp(opKind), std::move(left), std::move(right)});
         }
-        
-        default: {
-            throw std::runtime_error("Unexpected token in infix/postfix position");
-        }
+
+        default:
+            throw errorAt(token, "unexpected token '" + token.lexeme + "' in expression");
     }
 }
 
-
-
-
-
-}
+} // namespace alder::parser
