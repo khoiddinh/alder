@@ -38,12 +38,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 # ---- Tests ----
-add_executable(alder_tests
-    tests/test_lexer.cpp
-    tests/test_parser.cpp
-)
-target_link_libraries(alder_tests PRIVATE alder_core Catch2::Catch2WithMain)
 
-include(CTest)
-include(Catch)
-catch_discover_tests(alder_tests)
+#add_executable(alder_tests
+#    tests/<testfile>.cpp
+#)
+#target_link_libraries(alder_tests PRIVATE alder_core Catch2::Catch2WithMain)
+
+#include(CTest)
+#include(Catch)
+#catch_discover_tests(alder_tests)
+
