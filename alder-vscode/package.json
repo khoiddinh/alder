@@ -1,0 +1,25 @@
+{
+  "name": "alder-language",
+  "displayName": "Alder Language",
+  "description": "Syntax highlighting for the Alder language (.adr files)",
+  "version": "0.1.0",
+  "engines": { "vscode": "^1.75.0" },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "alder",
+        "aliases": ["Alder", "alder"],
+        "extensions": [".adr"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "alder",
+        "scopeName": "source.alder",
+        "path": "./syntaxes/alder.tmLanguage.json"
+      }
+    ]
+  }
+}
