@@ -52,6 +52,8 @@ void SemanticAnalyzer::analyzeDecl(const ast::Decl& decl) {
             analyzeFunc(d);
         else if constexpr (std::is_same_v<T, ast::GlobalStmt>)
             analyzeStmt(*d.stmt);
+        else if constexpr (std::is_same_v<T, ast::Macro>)
+            declare(d.name.name, "macro");
     }, decl);
 }
 

@@ -196,7 +196,12 @@ struct Func {
     BlockUP             body;
 };
 
-struct Decl : std::variant<GlobalStmt, Func> {
+struct Macro {
+		Identifier name; // name to replace
+		ExprUP value; // expression to sub in
+};
+
+struct Decl : std::variant<GlobalStmt, Func, Macro> {
     using variant::variant;
 };
 

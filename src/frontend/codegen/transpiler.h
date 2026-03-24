@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include "../ast/ast.h"
+#include <unordered_map>
 
 namespace alder::codegen {
 
@@ -17,14 +18,16 @@ private:
     std::ostringstream out_;
     int indentLevel_ = 0;
 
+
     // Indentation helpers
     void emit(const std::string& s);
     void emitLine(const std::string& s = "");
     void emitIndent();
 
     // Top-level
-    void emitDecl(const ast::Decl& decl);
+    void emitDecl(const ast::Decl& decl); // Ignores Macro Decl
     void emitFunc(const ast::Func& func);
+		void emitMacro(const ast::Macro& macro);
 
     // Statements
     void emitBlock(const ast::Block& block);

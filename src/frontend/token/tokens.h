@@ -54,6 +54,7 @@ enum class TokenType {
     KwFor,
     KwWhile,
     KwIn,
+		KwDef,
 
     // punctuation
     LParen, RParen,

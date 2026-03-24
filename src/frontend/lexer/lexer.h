@@ -31,7 +31,8 @@ private:
         {"else", tok::TokenType::KwElse},
         {"for", tok::TokenType::KwFor},
         {"while", tok::TokenType::KwWhile},
-        {"in", tok::TokenType::KwIn}
+        {"in", tok::TokenType::KwIn},
+				{"def", tok::TokenType::KwDef},
     };    
     /// @brief Ordered (greedy) table for mapping punctuation to tokens
     static inline const std::unordered_map<std::string_view, tok::TokenType> PUNCTUATION = {

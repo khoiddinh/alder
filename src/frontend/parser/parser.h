@@ -47,11 +47,11 @@ private:
 private:
     // * Top Level Declaration Parsers
     ast::Decl   parseDecl();              // item   := func | stmt
-    ast::Func   parseFunc();              // func   := KwDef Ident "(" params? ")" "->" type block
+    ast::Func   parseFunc();              // func   := KwFn Ident "(" params? ")" "->" type block
                                       // param := type ":" Identifier
                                       // handles all param arg parsing  
     ast::GlobalStmt parseGlobalStmt();              // dispatch by first token
-
+		ast::Macro		parseMacro();
 
     // * Statement Parsers
     ast::BlockUP parseBlock();               // block   := "{" { stmt } "}"  

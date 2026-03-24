@@ -30,6 +30,13 @@ std::string Transpiler::transpile(const ast::Module& module) {
     emitLine();
 
     emitStdlibPreamble();
+		
+		// parse macros first
+		for (const auto& decl : module.declarations) {
+			if (auto* macro_decl = std::get_if<ast::Macro>(&decl)) {
+				emitMacro(*macro_decl);
+			}
+		}
 
     for (const auto& decl : module.declarations)
         emitDecl(decl);
@@ -116,6 +123,7 @@ void Transpiler::emitDecl(const ast::Decl& decl) {
             emitFunc(d);
         else if constexpr (std::is_same_v<T, ast::GlobalStmt>)
             emitStmt(*d.stmt);
+				// don't parse macros, they are preprocessed
     }, decl);
 }
 
@@ -144,6 +152,10 @@ void Transpiler::emitFunc(const ast::Func& func) {
         emitLine("{}");
     }
     emitLine();
+}
+
+void Transpiler::emitMacro(const ast::Macro& macro) {
+	emitLine("#define " + macro.name.name + " " + exprToStr(*macro.value));
 }
 
 // ** Statements

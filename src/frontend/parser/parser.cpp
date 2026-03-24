@@ -93,7 +93,9 @@ Decl Parser::parseDecl() {
     Decl decl{};
     if (check(TokenType::KwFn))
         decl = parseFunc();
-    else
+    else if (check(TokenType::KwDef))
+				decl = parseMacro();
+		else
         decl = parseGlobalStmt();
     consumeOptionalNewlines();
     return decl;
@@ -123,6 +125,14 @@ Func Parser::parseFunc() {
 
 GlobalStmt Parser::parseGlobalStmt() {
     return GlobalStmt{ parseStmt() };
+}
+
+Macro Parser::parseMacro() {
+		Macro macro{};
+		consume(TokenType::KwDef, "expected 'def' to declare macro");
+		macro.name = Identifier{ consume(TokenType::Identifier, "expected macro name").lexeme };
+		macro.value = parseExpr(0);
+		return macro;
 }
 
 // ** Statement parsers **

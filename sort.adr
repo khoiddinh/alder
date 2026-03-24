@@ -2,7 +2,7 @@ fn merge(l1: list[int], l2: list[int]) -> list[int]:
 	ret: list[int] = []
 	i: int = 0
 	j: int = 0
-	while (i < len(l1) and j < len(l2)):
+	while i < len(l1) and j < len(l2):
 		if l1[i] <= l2[j]:
 			append(ret, l1[i])
 			i = i + 1
